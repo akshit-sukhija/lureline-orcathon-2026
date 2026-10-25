@@ -110,7 +110,7 @@ export function InvestigationSummary({ runResult }: InvestigationSummaryProps) {
       const response = await fetch('/api/explain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(4000),
+        signal: AbortSignal.timeout(10000),
         body: JSON.stringify({
           reportPayload: payload,
           model: selectedModel,
