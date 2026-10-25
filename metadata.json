@@ -1,0 +1,6 @@
+{
+  "name": "Lureline - Cyber Deception Investigation Workbench",
+  "description": "Evidence-first cyber deception investigation workbench with deterministic synthetic event replay, decoy detection, evidence-backed path reconstruction, and ground-truth benchmark comparison.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
