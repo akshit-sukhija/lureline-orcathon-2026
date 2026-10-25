@@ -2,83 +2,130 @@
 
 @layer base {
   :root {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, sans-serif;
     color-scheme: dark;
-  }
-
-  body {
-    background-color: #0b0f17;
-    color: #e2e8f0;
-    margin: 0;
-    padding: 0;
+    background: #070b12;
+    color: #e7edf8;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    --ll-bg: #070b12;
+    --ll-panel: rgba(15, 23, 38, .82);
+    --ll-line: rgba(145, 169, 206, .16);
+    --ll-muted: #91a0b8;
+    --ll-cyan: #70e1f6;
+    --ll-violet: #b5a2ff;
+    --ll-mint: #72e4c1;
   }
-
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    background:
+      radial-gradient(ellipse at 14% -8%, rgba(29, 111, 147, .18), transparent 38rem),
+      radial-gradient(ellipse at 95% 10%, rgba(93, 58, 156, .14), transparent 35rem),
+      var(--ll-bg);
+    color: #e7edf8;
+    margin: 0;
+    min-width: 320px;
+    padding: 0;
+  }
+  button, input, select, textarea { font: inherit; }
+  button { touch-action: manipulation; }
+  ::selection { background: rgba(93, 218, 244, .25); color: #fff; }
   code, pre, .font-mono {
     font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-variant-numeric: tabular-nums;
   }
 }
+.tabular-nums { font-variant-numeric: tabular-nums; }
 
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
+/* Isomorphic depth system: layered surfaces, light-catching edges, and low-noise glow. */
+.lureline-app { position: relative; isolation: isolate; overflow: clip; background: transparent !important; }
+.lureline-header { width: min(1500px, 100%); margin: 0 auto; padding: 0 clamp(16px, 3vw, 38px) 26px; }
+.lureline-topbar { min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid var(--ll-line); }
+.lureline-brand { display: inline-flex; align-items: center; gap: 11px; color: #f5f7ff; font-size: 19px; letter-spacing: -.045em; font-weight: 800; white-space: nowrap; text-decoration: none; }
+.lureline-brand small { display: block; margin-top: 3px; color: #72829c; font: 600 9px/1.1 'JetBrains Mono', monospace; letter-spacing: .15em; }
+.lureline-brand-dot { color: var(--ll-cyan); }
+.lureline-brand-mark { display: grid; place-items: center; width: 39px; height: 39px; border-radius: 13px; color: #91edff; border: 1px solid rgba(112,225,246,.4); background: linear-gradient(145deg, rgba(55,166,190,.28), rgba(68,68,129,.16)); box-shadow: inset 1px 1px 1px rgba(255,255,255,.18), 0 8px 28px rgba(17,176,207,.12); }
+.lureline-nav { display: flex; align-items: center; justify-content: center; gap: clamp(12px, 2.3vw, 30px); }
+.lureline-nav a { display: inline-flex; align-items: center; gap: 7px; color: #92a1b9; font-size: 12px; font-weight: 650; text-decoration: none; transition: color .18s ease; white-space: nowrap; }
+.lureline-nav a:hover, .lureline-nav a:focus-visible { color: #e6fbff; }
+.lureline-top-actions { display: flex; align-items: center; gap: 14px; }
+.lureline-live-label { display: inline-flex; align-items: center; gap: 7px; color: #a0b2ca; font: 600 9px 'JetBrains Mono', monospace; letter-spacing: .09em; white-space: nowrap; }
+.lureline-live-label span { width: 6px; height: 6px; background: #75e7bd; border-radius: 50%; box-shadow: 0 0 12px rgba(117,231,189,.8); }
+.lureline-primary-button, .lureline-secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 10px; cursor: pointer; font-size: 11px; font-weight: 750; letter-spacing: .01em; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+.lureline-primary-button { color: #06151d; padding: 11px 15px; border: 1px solid rgba(156,246,255,.72); background: linear-gradient(135deg, #a0f0f6 0%, #65d7eb 55%, #8bc8ff 100%); box-shadow: 0 7px 22px rgba(41,191,219,.18), inset 0 1px rgba(255,255,255,.55); }
+.lureline-primary-button:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(41,191,219,.25); }
+.lureline-secondary-button { color: #cad5e8; background: rgba(20,29,47,.85); border: 1px solid var(--ll-line); padding: 9px 11px; }
+.lureline-secondary-button:hover:not(:disabled) { border-color: rgba(112,225,246,.45); background: rgba(29,48,72,.95); }
+.lureline-secondary-button:disabled { opacity: .36; cursor: not-allowed; }
+.lureline-primary-button:focus-visible, .lureline-secondary-button:focus-visible, .lureline-scenario-picker button:focus-visible { outline: 2px solid var(--ll-cyan); outline-offset: 3px; }
+.lureline-hero { position: relative; isolation: isolate; display: flex; align-items: center; justify-content: space-between; gap: 30px; min-height: 250px; padding: 36px 4px 28px; overflow: hidden; }
+.lureline-hero-copy { position: relative; z-index: 1; max-width: 800px; }
+.lureline-eyebrow { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; color: #9db1ca; font: 600 9px 'JetBrains Mono', monospace; letter-spacing: .1em; text-transform: uppercase; }
+.lureline-eyebrow span { color: var(--ll-cyan); }
+.lureline-eyebrow i { width: 3px; height: 3px; background: #647897; border-radius: 50%; }
+.lureline-hero h1 { margin: 14px 0 10px; color: #f4f7ff; font-size: clamp(29px, 4.3vw, 51px); font-weight: 760; line-height: 1.08; letter-spacing: -.055em; text-wrap: balance; }
+.lureline-hero-copy > p { max-width: 720px; margin: 0; color: #9aa9c0; font-size: 13px; line-height: 1.8; }
+.lureline-objective { display: flex; align-items: flex-start; gap: 9px; max-width: 710px; margin-top: 19px; padding: 11px 13px; border-left: 2px solid rgba(112,225,246,.65); border-radius: 0 10px 10px 0; background: linear-gradient(90deg, rgba(43,139,169,.14), rgba(43,139,169,.015)); color: var(--ll-cyan); }
+.lureline-objective > span { display: flex; flex-wrap: wrap; gap: 7px; color: #acbbcf; font-size: 11px; line-height: 1.6; }
+.lureline-objective strong { color: #dbf9ff; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.lureline-hero-orb { position: absolute; right: 7%; top: 8px; width: 260px; height: 240px; display: grid; place-items: center; opacity: .94; z-index: 0; pointer-events: none; }
+.lureline-hero-orb::before { content: ''; position: absolute; inset: 26px; border-radius: 50%; background: radial-gradient(circle, rgba(46,190,223,.12), rgba(102,72,190,.04) 42%, transparent 68%); filter: blur(4px); }
+.lureline-orb-ring { position: absolute; width: 150px; height: 150px; border: 1px solid rgba(112,225,246,.2); border-radius: 37%; transform: rotate(27deg) perspective(500px) rotateX(62deg); box-shadow: 0 0 35px rgba(61,198,226,.06), inset 0 0 25px rgba(61,198,226,.05); }
+.ring-two { width: 186px; height: 186px; border-color: rgba(181,162,255,.19); transform: rotate(-31deg) perspective(500px) rotateX(62deg); }
+.lureline-orb-core { position: relative; display: grid; place-items: center; width: 94px; height: 94px; border-radius: 28px; color: #a1f1ff; border: 1px solid rgba(112,225,246,.45); background: linear-gradient(145deg, rgba(62,172,197,.25), rgba(74,61,140,.25)); box-shadow: inset 2px 2px 2px rgba(255,255,255,.17), inset -6px -8px 20px rgba(4,10,24,.3), 0 17px 55px rgba(32,182,214,.2); transform: rotate(-7deg); }
+.lureline-orb-chip { position: absolute; padding: 6px 9px; border-radius: 7px; color: #b9cadf; font: 600 8px 'JetBrains Mono', monospace; letter-spacing: .09em; border: 1px solid rgba(145,169,206,.22); background: rgba(10,16,29,.85); box-shadow: 0 6px 18px rgba(0,0,0,.2); }
+.chip-top { top: 42px; right: 0; } .chip-bottom { bottom: 32px; left: 3px; color: #8be6d0; }
+.lureline-controls { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px; border: 1px solid var(--ll-line); border-radius: 16px; background: linear-gradient(135deg, rgba(22,33,53,.92), rgba(11,17,30,.86)); box-shadow: inset 1px 1px rgba(255,255,255,.045), 0 10px 26px rgba(0,0,0,.14); }
+.lureline-scenario-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.lureline-scenario-picker button { min-width: 96px; display: flex; align-items: center; gap: 10px; padding: 8px 11px; border: 1px solid transparent; border-radius: 11px; text-align: left; color: #98a7bf; background: transparent; cursor: pointer; transition: background .18s ease, border-color .18s ease, transform .18s ease; }
+.lureline-scenario-picker button > span { display: grid; place-items: center; width: 25px; height: 25px; border-radius: 8px; color: #b9c6da; background: rgba(142,162,191,.1); font: 700 10px 'JetBrains Mono', monospace; }
+.lureline-scenario-picker button small { font-size: 10px; font-weight: 650; }
+.lureline-scenario-picker button:hover { background: rgba(138,160,192,.08); }
+.lureline-scenario-picker button.active { color: #e9fbff; border-color: rgba(112,225,246,.3); background: linear-gradient(145deg, rgba(42,135,160,.19), rgba(34,48,81,.26)); box-shadow: inset 0 1px rgba(255,255,255,.07), 0 4px 16px rgba(46,175,199,.07); }
+.lureline-scenario-picker button.active > span { color: #09212a; background: var(--ll-cyan); box-shadow: 0 0 18px rgba(112,225,246,.2); }
+.lureline-control-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 7px; }
+.lureline-run-state { margin-right: 5px; color: #8094b1; font: 600 9px 'JetBrains Mono', monospace; letter-spacing: .08em; white-space: nowrap; }
+.lureline-metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.lureline-metric { position: relative; isolation: isolate; overflow: hidden; min-height: 112px; padding: 15px 16px; border-radius: 14px; border: 1px solid rgba(140,163,198,.17); background: linear-gradient(145deg, rgba(21,32,51,.91), rgba(12,18,31,.93)); box-shadow: inset 1px 1px rgba(255,255,255,.07), inset -1px -1px rgba(0,0,0,.25), 0 12px 25px rgba(0,0,0,.1); }
+.lureline-metric::before { content: ''; position: absolute; z-index: -1; top: 0; left: 12px; right: 12px; height: 1px; background: linear-gradient(90deg, transparent, rgba(208,229,255,.36), transparent); }
+.lureline-metric-label { display: flex; align-items: center; gap: 7px; color: #9aa9c0; font-size: 10px; font-weight: 650; }
+.metric-index { color: #60738e; font: 500 9px 'JetBrains Mono', monospace; }
+.lureline-metric-value { margin-top: 12px; color: #eff5ff; font: 730 27px/1 'Plus Jakarta Sans', sans-serif; letter-spacing: -.045em; }
+.lureline-metric-detail { margin-top: 7px; color: #70819b; font-size: 9px; line-height: 1.4; }
+.metric-cyan .lureline-metric-value { color: #8ceaff; } .metric-violet .lureline-metric-value { color: #c7b9ff; } .metric-mint .lureline-metric-value { color: #87e8c7; } .metric-rose .lureline-metric-value { color: #ff94ab; } .metric-amber .lureline-metric-value { color: #ffd18a; }
+.lureline-metric-glow { position: absolute; right: -30px; bottom: -65px; width: 100px; height: 100px; border-radius: 50%; background: rgba(83,179,206,.08); filter: blur(23px); z-index: -1; pointer-events: none; }
 
-
-/* Workbench frame and component surfaces */
-.lureline-app {
-  position: relative;
-  isolation: isolate;
-  overflow: clip;
-  background: transparent !important;
-}
-.lureline-main {
-  width: min(1500px, 100%);
-  padding-top: 25px;
-  padding-bottom: 36px;
-}
-.lureline-main section {
-  position: relative;
-  background: linear-gradient(148deg, rgba(18, 28, 45, .94), rgba(10, 16, 28, .96)) !important;
-  border-color: var(--ll-line) !important;
-  border-radius: 17px !important;
-  box-shadow: inset 1px 1px rgba(255,255,255,.035), 0 14px 35px rgba(0,0,0,.14);
-}
-.lureline-main section > [class*="border-b"] {
-  border-color: rgba(145,169,206,.14) !important;
-}
-.lureline-main section h2 {
-  color: #eef4ff;
-  letter-spacing: -.02em;
-}
+/* Give all existing functional modules the same polished surface without changing their logic. */
+.lureline-main { width: min(1500px, 100%); padding-top: 25px; padding-bottom: 36px; }
+.lureline-main section { position: relative; background: linear-gradient(148deg, rgba(18,28,45,.94), rgba(10,16,28,.96)) !important; border-color: var(--ll-line) !important; border-radius: 17px !important; box-shadow: inset 1px 1px rgba(255,255,255,.035), 0 14px 35px rgba(0,0,0,.14); }
+.lureline-main section > [class*="border-b"] { border-color: rgba(145,169,206,.14) !important; }
+.lureline-main section h2 { color: #eef4ff; letter-spacing: -.02em; }
 .lureline-main section p { text-wrap: pretty; }
-.lureline-main section [class*="bg-slate-900"] {
-  background-color: rgba(8, 15, 27, .6);
-}
-.lureline-main section .rounded-md.border,
-.lureline-main section .rounded-lg.border {
-  border-color: rgba(145,169,206,.16);
-}
-.lureline-main section input,
-.lureline-main section select,
-.lureline-main section textarea {
-  color: #e4edf9;
-  background-color: rgba(6, 12, 23, .8);
-  border-color: rgba(145,169,206,.22);
-  border-radius: 9px;
-}
+.lureline-main section [class*="bg-slate-900"] { background-color: rgba(8,15,27,.6); }
+.lureline-main section .rounded-md.border, .lureline-main section .rounded-lg.border { border-color: rgba(145,169,206,.16); }
+.lureline-main section input, .lureline-main section select, .lureline-main section textarea { color: #e4edf9; background-color: rgba(6,12,23,.8); border-color: rgba(145,169,206,.22); border-radius: 9px; }
 .lureline-main section button:not(:disabled) { transition: background .16s ease, border-color .16s ease, transform .16s ease; }
-.lureline-main section button:focus-visible,
-.lureline-main section a:focus-visible,
-.lureline-nav a:focus-visible {
-  outline: 2px solid var(--ll-cyan);
-  outline-offset: 3px;
-}
-.lureline-footer {
-  background: rgba(6, 10, 18, .85) !important;
-  border-color: var(--ll-line) !important;
+.lureline-main section button:focus-visible, .lureline-main section a:focus-visible, .lureline-nav a:focus-visible { outline: 2px solid var(--ll-cyan); outline-offset: 3px; }
+.lureline-footer { background: rgba(6,10,18,.85) !important; border-color: var(--ll-line) !important; }
+
+@media (max-width: 1120px) {
+  .lureline-nav { gap: 12px; } .lureline-nav a { font-size: 11px; } .lureline-live-label { display: none; }
+  .lureline-hero-orb { right: 0; opacity: .5; } .lureline-hero-copy { max-width: 78%; }
+  .lureline-metrics { grid-template-columns: repeat(3, minmax(0,1fr)); }
 }
 @media (max-width: 760px) {
-  .lureline-main { padding-top: 18px; padding-bottom: 24px; }
-  .lureline-main section { border-radius: 14px !important; }
+  .lureline-topbar { min-height: 67px; gap: 12px; flex-wrap: wrap; padding: 12px 0; }
+  .lureline-nav { order: 3; width: 100%; justify-content: flex-start; overflow-x: auto; padding: 4px 0 7px; }
+  .lureline-nav a { font-size: 11px; } .lureline-brand { font-size: 17px; } .lureline-brand-mark { width: 34px; height: 34px; }
+  .lureline-top-actions { margin-left: auto; } .lureline-primary-button { padding: 9px 11px; }
+  .lureline-hero { min-height: unset; padding: 30px 0 25px; } .lureline-hero-copy { max-width: 100%; } .lureline-hero-orb { width: 150px; height: 150px; right: -36px; top: 12px; opacity: .2; }
+  .lureline-hero h1 { max-width: 100%; font-size: clamp(29px, 8vw, 39px); } .lureline-hero-copy > p { font-size: 12px; } .lureline-objective { margin-top: 14px; }
+  .lureline-controls { align-items: stretch; flex-direction: column; padding: 10px; } .lureline-scenario-picker { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); } .lureline-scenario-picker button { min-width: 0; padding: 8px; } .lureline-control-actions { justify-content: flex-start; } .lureline-run-state { width: 100%; margin-bottom: 3px; }
+  .lureline-metrics { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; } .lureline-metric { padding: 12px; min-height: 101px; } .lureline-metric-value { font-size: 24px; }
+  .lureline-main { padding-top: 18px; padding-bottom: 24px; } .lureline-main section { border-radius: 14px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
