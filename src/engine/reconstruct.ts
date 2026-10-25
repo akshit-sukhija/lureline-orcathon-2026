@@ -17,10 +17,13 @@ import {
  * 3. Every confirmed edge must have both:
  *    (a) at least one supporting event ID, and
  *    (b) a valid network topology link.
- * 4. If a session exhibits a discontinuity (a subsequent event originates from a node
- *    never previously reached in that session) or a non-topological transition, the engine
- *    does NOT invent the missing edge; it records an explicit UnresolvedGap stating
- *    "Insufficient evidence to confirm this connection."
+ * 4. Sequential continuity requires that a subsequent event's sourceNodeId matches
+ *    the immediately preceding confirmed event's destinationNodeId (lastConfirmedNodeId).
+ *    A node merely visited earlier in the session (as an earlier source or prior hop)
+ *    does NOT prove continuity from the immediately preceding confirmed event.
+ * 5. Whenever sequential continuity is broken or a transition violates topology,
+ *    the engine never invents a bridge edge; it records an explicit UnresolvedGap
+ *    stating "Insufficient evidence to confirm this connection."
  */
 export function reconstructPaths(
   validEvents: readonly SimulatedEvent[],
@@ -35,7 +38,7 @@ export function reconstructPaths(
     ])
   );
 
-  // Group events by sessionId while preserving the deterministic sort order
+  // Group events by sessionId while preserving deterministic sort order
   const eventsBySession = new Map<string, SimulatedEvent[]>();
   for (const ev of validEvents) {
     const list = eventsBySession.get(ev.sessionId) ?? [];
@@ -49,8 +52,6 @@ export function reconstructPaths(
   let gapCounter = 1;
 
   for (const [sessionId, sessionEvents] of eventsBySession.entries()) {
-    const visitedNodes = new Set<string>();
-    const eventIdsReachingNode = new Map<string, string[]>();
     let lastConfirmedNodeId: string | null = null;
     let lastConfirmedEventId: string | null = null;
 
@@ -86,13 +87,20 @@ export function reconstructPaths(
         continue;
       }
 
-      // 2. Check session continuity for hops after the first confirmed event
-      const isFirstConfirmedInSession = visitedNodes.size === 0;
-      const wasSourceVisitedInSession = visitedNodes.has(ev.sourceNodeId);
+      // 2. Check strict sequential continuity from the immediately preceding confirmed event
+      const isFirstConfirmedInSession = lastConfirmedNodeId === null;
+      const isContiguousWithLastConfirmed =
+        !isFirstConfirmedInSession && ev.sourceNodeId === lastConfirmedNodeId;
 
-      if (!isFirstConfirmedInSession && !wasSourceVisitedInSession && lastConfirmedNodeId) {
-        // Missing intermediate link between lastConfirmedNodeId and ev.sourceNodeId!
-        // Do NOT invent an edge between lastConfirmedNodeId and ev.sourceNodeId.
+      if (
+        !isFirstConfirmedInSession &&
+        !isContiguousWithLastConfirmed &&
+        lastConfirmedNodeId !== null
+      ) {
+        // Sequential discontinuity: ev.sourceNodeId does not match the immediately preceding
+        // confirmed destination (lastConfirmedNodeId). Even if ev.sourceNodeId was visited
+        // earlier in the session, that does not establish how flow moved from lastConfirmedNodeId
+        // to ev.sourceNodeId. Never invent a bridge edge; record an explicit UnresolvedGap.
         const missingGap: UnresolvedGap = {
           id: `GAP-${String(gapCounter++).padStart(3, '0')}`,
           sessionId,
@@ -102,23 +110,29 @@ export function reconstructPaths(
             ? [lastConfirmedEventId, ev.id]
             : [ev.id],
           kind: 'missing_intermediate_hop',
-          message: `Insufficient evidence to confirm this connection. Session "${sessionId}" was last observed at ${lastConfirmedNodeId} (${
+          message: `Insufficient evidence to confirm this connection. Session "${sessionId}" was last confirmed at destination ${lastConfirmedNodeId} (${
             lastConfirmedEventId ?? 'prior event'
-          }) and subsequently originated from ${ev.sourceNodeId} (${
+          }) and next originated from ${ev.sourceNodeId} (${
             ev.id
           }), with no supporting event record confirming traversal from ${lastConfirmedNodeId} to ${ev.sourceNodeId}.`,
-          unresolvedQuestion: `Which intermediate event or relay allowed session "${sessionId}" to move from ${
+          unresolvedQuestion: `Which unrecorded transition or separate branch caused session "${sessionId}" to originate from ${
+            sourceNode?.label ?? ev.sourceNodeId
+          } immediately after reaching ${
             nodeMap.get(lastConfirmedNodeId)?.label ?? lastConfirmedNodeId
-          } to ${sourceNode?.label ?? ev.sourceNodeId}?`,
+          }?`,
         };
         unresolvedGaps.push(missingGap);
         sessionGaps.push(missingGap);
       }
 
-      const priorChainEvents = eventIdsReachingNode.get(ev.sourceNodeId) ?? [];
+      const priorChainEvents =
+        isContiguousWithLastConfirmed && lastConfirmedEventId
+          ? [lastConfirmedEventId]
+          : [];
+
       const evidenceType = isFirstConfirmedInSession
         ? 'observed-session-origin'
-        : wasSourceVisitedInSession
+        : isContiguousWithLastConfirmed
         ? 'observed-contiguous-chain'
         : 'observed-isolated-segment';
 
@@ -126,16 +140,18 @@ export function reconstructPaths(
         evidenceType === 'observed-contiguous-chain'
           ? `Confirmed contiguous hop in session "${sessionId}": supported directly by event ${
               ev.id
-            } on valid route ${topoEdge.id} (${topoEdge.protocol}), continuing from prior session arrival via ${priorChainEvents.join(
+            } on valid route ${topoEdge.id} (${
+              topoEdge.protocol
+            }), continuing directly from immediately preceding confirmed destination ${lastConfirmedNodeId} via ${priorChainEvents.join(
               ', '
             )}.`
           : evidenceType === 'observed-session-origin'
           ? `Confirmed initial session entry hop in session "${sessionId}": directly supported by event ${ev.id} on valid route ${topoEdge.id} (${topoEdge.protocol}).`
-          : `Observed isolated segment in session "${sessionId}": directly supported by event ${ev.id} on valid route ${topoEdge.id}, but preceded by an unconfirmed upstream telemetry gap into ${ev.sourceNodeId}.`;
+          : `Observed non-contiguous segment in session "${sessionId}": directly supported by event ${ev.id} on valid route ${topoEdge.id}, but not sequentially continuous with the immediately preceding confirmed destination (${lastConfirmedNodeId}).`;
 
       const limitations =
         evidenceType === 'observed-isolated-segment'
-          ? `Upstream arrival at ${ev.sourceNodeId} within session "${sessionId}" is unconfirmed due to missing intermediate telemetry. Synthetic record only.`
+          ? `Sequential continuity from preceding destination ${lastConfirmedNodeId} to ${ev.sourceNodeId} within session "${sessionId}" is unconfirmed. Synthetic record only.`
           : 'Supported by deterministic synthetic telemetry and allowed topology rules; does not prove real-world host compromise.';
 
       const existing = edgeAccumulator.get(edgeKey);
@@ -180,15 +196,7 @@ export function reconstructPaths(
         hasDecoyInteraction = true;
       }
 
-      // Mark source and destination as visited in this session
-      visitedNodes.add(ev.sourceNodeId);
-      visitedNodes.add(ev.destinationNodeId);
-      const reachingDest = eventIdsReachingNode.get(ev.destinationNodeId) ?? [];
-      if (!reachingDest.includes(ev.id)) {
-        reachingDest.push(ev.id);
-      }
-      eventIdsReachingNode.set(ev.destinationNodeId, reachingDest);
-
+      // Advance the sequential session cursor to the newly confirmed destination
       lastConfirmedNodeId = ev.destinationNodeId;
       lastConfirmedEventId = ev.id;
     }

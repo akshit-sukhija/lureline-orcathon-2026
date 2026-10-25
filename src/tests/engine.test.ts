@@ -8,11 +8,13 @@ import {
   SCENARIO_GROUND_TRUTH,
 } from '../data/scenarios';
 import { validateAndDeduplicateEvents } from '../engine/validateEvents';
-import { detectDecoyInteractions } from '../engine/detect';
 import { reconstructPaths } from '../engine/reconstruct';
-import { runNaiveBaseline } from '../engine/baseline';
-import { computeMethodMetrics, evaluateBenchmark } from '../engine/evaluate';
+import { computeMethodMetrics } from '../engine/evaluate';
 import { executeScenario } from '../engine/runScenario';
+import {
+  buildInvestigationReportPayload,
+  generateDeterministicExplanation,
+} from '../engine/explainerAndReport';
 import { SimulatedEvent } from '../domain/types';
 
 test('Scenario A — Confirmed decoy interaction flags exact event and rule with full path provenance', () => {
@@ -29,7 +31,6 @@ test('Scenario A — Confirmed decoy interaction flags exact event and rule with
   assert.equal(alert.destinationNodeId, 'decoy-db-01');
   assert.equal(alert.provenance, 'synthetic');
 
-  // Verify referenced event and rule actually exist
   const eventIds = new Set(result.validation.validEvents.map((e) => e.id));
   const ruleIds = new Set(DETECTION_RULES.map((r) => r.id));
   assert.ok(eventIds.has(alert.supportingEventIds[0]));
@@ -41,6 +42,8 @@ test('Scenario A — Confirmed decoy interaction flags exact event and rule with
     'jump-host-01->app-srv-02',
     'app-srv-02->decoy-db-01',
   ]);
+  assert.equal(result.reconstruction.unresolvedGaps.length, 0);
+
   for (const edge of result.reconstruction.predictedEdges) {
     assert.ok(edge.supportingEventIds.length > 0, `Edge ${edge.edgeKey} must cite supporting event IDs`);
     assert.ok(edge.topologyEdgeId !== null, `Edge ${edge.edgeKey} must reference a valid topology link`);
@@ -78,7 +81,6 @@ test('Scenario C — Incomplete evidence refuses to fabricate missing hop and re
 
   const result = executeScenario(scenarioC);
 
-  // Lureline must NOT invent jump-host-01->app-srv-02
   assert.ok(
     !result.reconstruction.predictedEdgeKeys.includes('jump-host-01->app-srv-02'),
     'Lureline must never fabricate the missing intermediate edge'
@@ -88,7 +90,6 @@ test('Scenario C — Incomplete evidence refuses to fabricate missing hop and re
     'app-srv-02->decoy-cred-vault',
   ]);
 
-  // Explicit unresolved gap with required phrase
   assert.equal(result.reconstruction.unresolvedGaps.length, 1);
   const gap = result.reconstruction.unresolvedGaps[0];
   assert.equal(gap.fromNodeId, 'jump-host-01');
@@ -98,7 +99,6 @@ test('Scenario C — Incomplete evidence refuses to fabricate missing hop and re
     'Gap message must explicitly state "Insufficient evidence to confirm this connection."'
   );
 
-  // Benchmark: Lureline has 2 TP, 0 FP, 1 FN (missed edge); Naive Baseline bridges gap (3 TP, 0 FP, 0 FN)
   assert.equal(result.benchmark.lureline.tpCount, 2);
   assert.equal(result.benchmark.lureline.fpCount, 0);
   assert.equal(result.benchmark.lureline.fnCount, 1);
@@ -112,7 +112,7 @@ test('Scenario C — Incomplete evidence refuses to fabricate missing hop and re
   );
 });
 
-test('Scenario D — Deduplication, deterministic timestamp+ID ordering, session isolation, and spoof rejection', () => {
+test('Scenario D — Deduplication, deterministic timestamp+ID ordering, session isolation, continuity gap, and spoof rejection', () => {
   const scenarioD = SCENARIOS.find((s) => s.code === 'SCENARIO-D');
   assert.ok(scenarioD, 'Scenario D must exist');
 
@@ -140,13 +140,22 @@ test('Scenario D — Deduplication, deterministic timestamp+ID ordering, session
   assert.ok(backupSession);
   assert.deepEqual(backupSession.confirmedEdgeKeys, ['workstation-04->fileshare-01']);
 
-  // 4. Spoofed non-topological edge fileshare-01->decoy-db-01 rejected by Lureline
+  // 4. Spoofed non-topological edge fileshare-01->decoy-db-01 rejected by Lureline,
+  // and non-continuous jump from app-srv-02 (EVT-D-002A destination) back to jump-host-01 (EVT-D-003 source)
+  // recorded as an explicit continuity gap rather than falsely treated as contiguous.
   assert.ok(
     !result.reconstruction.predictedEdgeKeys.includes('fileshare-01->decoy-db-01'),
     'Lureline must reject non-topological spoofed edge'
   );
-  assert.equal(result.reconstruction.unresolvedGaps.length, 1);
-  assert.equal(result.reconstruction.unresolvedGaps[0].kind, 'invalid_topology_transition');
+  assert.ok(
+    !result.reconstruction.predictedEdgeKeys.includes('app-srv-02->jump-host-01'),
+    'Lureline must never invent an unsupported bridge edge between app-srv-02 and jump-host-01'
+  );
+  assert.equal(result.reconstruction.unresolvedGaps.length, 2);
+  assert.equal(result.reconstruction.unresolvedGaps[0].kind, 'missing_intermediate_hop');
+  assert.equal(result.reconstruction.unresolvedGaps[0].fromNodeId, 'app-srv-02');
+  assert.equal(result.reconstruction.unresolvedGaps[0].toNodeId, 'jump-host-01');
+  assert.equal(result.reconstruction.unresolvedGaps[1].kind, 'invalid_topology_transition');
 
   // 5. Lureline achieves 100% precision (0 FP), while Naive Baseline suffers 2 FPs
   assert.equal(result.benchmark.lureline.tpCount, 4);
@@ -157,10 +166,64 @@ test('Scenario D — Deduplication, deterministic timestamp+ID ordering, session
   assert.ok((result.benchmark.naiveBaseline.precision ?? 1) < 1);
 });
 
+test('Regression: Previously visited source or earlier destination node does not falsely prove continuity from immediately preceding confirmed destination', () => {
+  // Case A: Node visited only as initial sourceNodeId (workstation-04) is reused after session moved to jump-host-01
+  const reusedOriginEvents: SimulatedEvent[] = [
+    {
+      id: 'REG-001',
+      scenarioId: 'reg-test',
+      timestamp: '2026-10-25T14:00:00.000Z',
+      sessionId: 'sess-reg-1',
+      sourceNodeId: 'workstation-04',
+      destinationNodeId: 'jump-host-01',
+      eventType: 'SSH_SESSION_OPEN',
+      description: 'Hop 1: workstation-04 -> jump-host-01',
+      provenance: 'synthetic',
+    },
+    {
+      id: 'REG-002',
+      scenarioId: 'reg-test',
+      timestamp: '2026-10-25T14:00:10.000Z',
+      sessionId: 'sess-reg-1',
+      sourceNodeId: 'workstation-04',
+      destinationNodeId: 'fileshare-01',
+      eventType: 'SMB_SHARE_MOUNT',
+      description: 'Hop 2: originates from workstation-04 while preceding confirmed destination was jump-host-01',
+      provenance: 'synthetic',
+    },
+  ];
+
+  const reconOrigin = reconstructPaths(
+    reusedOriginEvents,
+    NETWORK_NODES,
+    NETWORK_TOPOLOGY_EDGES
+  );
+
+  // Must record an explicit UnresolvedGap from jump-host-01 to workstation-04
+  assert.equal(reconOrigin.unresolvedGaps.length, 1);
+  assert.equal(reconOrigin.unresolvedGaps[0].fromNodeId, 'jump-host-01');
+  assert.equal(reconOrigin.unresolvedGaps[0].toNodeId, 'workstation-04');
+  assert.ok(
+    reconOrigin.unresolvedGaps[0].message.includes(
+      'Insufficient evidence to confirm this connection.'
+    )
+  );
+
+  // Second edge must be classified as observed-isolated-segment, NOT observed-contiguous-chain
+  const secondEdge = reconOrigin.predictedEdges.find(
+    (e) => e.edgeKey === 'workstation-04->fileshare-01'
+  );
+  assert.ok(secondEdge);
+  assert.equal(secondEdge.evidenceType, 'observed-isolated-segment');
+  assert.deepEqual(secondEdge.priorChainEventIds, []);
+
+  // Must never invent jump-host-01->workstation-04
+  assert.ok(!reconOrigin.predictedEdgeKeys.includes('jump-host-01->workstation-04'));
+});
+
 test('Zero-denominator handling in evaluation metrics returns null (N/A) safely', () => {
   const emptyReconstruction = reconstructPaths([], NETWORK_NODES, NETWORK_TOPOLOGY_EDGES);
 
-  // Case 1: 0 predicted edges, 2 expected edges -> precision is null (0/0), recall is 0 (0/2)
   const metricsNoPred = computeMethodMetrics('Empty Predictor', emptyReconstruction, [
     'workstation-04->jump-host-01',
     'jump-host-01->app-srv-02',
@@ -169,7 +232,6 @@ test('Zero-denominator handling in evaluation metrics returns null (N/A) safely'
   assert.ok(metricsNoPred.precisionExplanation.includes('N/A'));
   assert.equal(metricsNoPred.recall, 0);
 
-  // Case 2: 0 predicted edges, 0 expected edges -> both precision and recall are null (N/A)
   const metricsBothZero = computeMethodMetrics('Zero Both', emptyReconstruction, []);
   assert.equal(metricsBothZero.precision, null);
   assert.equal(metricsBothZero.recall, null);
@@ -209,13 +271,56 @@ test('Validation rejects malformed fields, unknown nodes, and self-loops determi
   assert.equal(validation.issues.length, 2);
 });
 
+test('Download Report payload builder and deterministic explainer produce valid, truthful structures', () => {
+  // 1. Null state handled safely
+  assert.equal(buildInvestigationReportPayload(null), null);
+
+  // 2. Verify report payload and deterministic explanation across all 4 scenarios
+  for (const scenario of SCENARIOS) {
+    const runResult = executeScenario(scenario);
+    const fixedTime = '2026-10-25T15:00:00.000Z';
+    const report = buildInvestigationReportPayload(runResult, fixedTime);
+    assert.ok(report);
+
+    // Must be cleanly JSON-serializable and parseable
+    const serialized = JSON.stringify(report, null, 2);
+    const parsed = JSON.parse(serialized);
+    assert.equal(parsed.scenario.id, scenario.id);
+    assert.equal(parsed.scenario.code, scenario.code);
+    assert.equal(parsed.exportedAt, fixedTime);
+    assert.equal(parsed.alerts.length, runResult.alerts.length);
+    assert.equal(
+      parsed.reconstructedEdges.length,
+      runResult.reconstruction.predictedEdges.length
+    );
+    assert.equal(
+      parsed.unresolvedGaps.length,
+      runResult.reconstruction.unresolvedGaps.length
+    );
+
+    // Verify deterministic explanation references actual computed facts without fabricating
+    const explanation = generateDeterministicExplanation(
+      runResult,
+      'Summarize the evidence and limitations'
+    );
+    assert.ok(explanation.includes(scenario.code));
+    assert.ok(explanation.includes('provenance="synthetic"'));
+    for (const alert of runResult.alerts) {
+      assert.ok(explanation.includes(alert.id));
+      assert.ok(explanation.includes(alert.ruleId));
+    }
+    for (const edge of runResult.reconstruction.predictedEdges) {
+      assert.ok(explanation.includes(edge.edgeKey));
+    }
+  }
+});
+
 test('Deterministic reruns and identical inputs for Lureline and Naive Baseline', () => {
   for (const scenario of SCENARIOS) {
     const run1 = executeScenario(scenario);
     const run2 = executeScenario(scenario);
     assert.deepEqual(run1, run2, `Rerunning ${scenario.code} must produce identical canonical state`);
 
-    // Verify both reconstruction and baseline received the exact same validated event list
     const reconEventIds = run1.reconstruction.sessionGroups.flatMap((g) =>
       g.events.map((e) => e.id)
     );
