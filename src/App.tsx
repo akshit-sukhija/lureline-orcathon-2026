@@ -43,7 +43,7 @@ export default function App() {
   } = useInvestigation();
 
   return (
-    <div id="top" className="min-h-screen bg-[#0b0f17] text-slate-200 flex flex-col">
+    <div id="top" className="lureline-app min-h-screen bg-[#0b0f17] text-slate-200 flex flex-col">
       {/* Persistent visible simulation notice */}
       <SimulationNotice />
 
@@ -62,7 +62,7 @@ export default function App() {
       />
 
       {/* Main Analyst Workbench Viewport */}
-      <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <main className="lureline-main flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* Primary Investigation Grid: Network Topology (7 cols) + Alerts & Inspector (5 cols) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           <div className="lg:col-span-7 space-y-6">
@@ -120,7 +120,7 @@ export default function App() {
       </main>
 
       {/* Restrained Footer */}
-      <footer className="border-t border-slate-800/80 bg-[#090d14] px-4 sm:px-6 py-4 text-xs text-slate-400">
+      <footer className="lureline-footer border-t border-slate-800/80 bg-[#090d14] px-4 sm:px-6 py-4 text-xs text-slate-400">
         <div className="max-w-[1440px] mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
             Lureline · ORCATHON 2026 Cybersecurity &amp; Blockchain Track · Evidence-First Cyber Deception Workbench
