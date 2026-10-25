@@ -1,5 +1,15 @@
-import { Play, RotateCcw, StepForward, Activity, ShieldCheck, Workflow, BookOpen } from 'lucide-react';
+import {
+  Activity,
+  BookOpen,
+  Play,
+  RotateCcw,
+  ShieldCheck,
+  StepForward,
+  Workflow,
+} from 'lucide-react';
 import { ScenarioDefinition, ScenarioRunResult } from '../domain/types';
+
+export type WorkbenchSection = 'investigation' | 'evidence' | 'activity' | 'results';
 
 interface IncidentHeaderProps {
   scenarios: ScenarioDefinition[];
@@ -8,6 +18,8 @@ interface IncidentHeaderProps {
   isReset: boolean;
   runCount: number;
   replayStepCount: number | null;
+  activeSection: WorkbenchSection;
+  onNavigate: (section: WorkbenchSection) => void;
   onSelectScenario: (scenarioId: string) => void;
   onRunScenario: () => void;
   onStepReplay: () => void;
@@ -21,6 +33,8 @@ export function IncidentHeader({
   isReset,
   runCount,
   replayStepCount,
+  activeSection,
+  onNavigate,
   onSelectScenario,
   onRunScenario,
   onStepReplay,
@@ -33,34 +47,43 @@ export function IncidentHeader({
   const unresolvedGapsCount = runResult?.reconstruction.unresolvedGaps.length ?? 0;
 
   const navItems = [
-    { href: '#network-topology', label: 'Topology', icon: Workflow },
-    { href: '#evidence-inspector', label: 'Evidence', icon: ShieldCheck },
-    { href: '#event-ledger', label: 'Activity', icon: Activity },
-    { href: '#benchmark-comparison', label: 'Evaluation', icon: BookOpen },
-  ];
+    { id: 'investigation', label: 'Investigate', description: 'Scenario & path', icon: Workflow },
+    { id: 'evidence', label: 'Evidence', description: 'Inspect findings', icon: ShieldCheck },
+    { id: 'activity', label: 'Activity log', description: 'Raw event records', icon: Activity },
+    { id: 'results', label: 'Results', description: 'Report & evaluation', icon: BookOpen },
+  ] as const;
 
   const metrics = [
-    { label: 'Validated events', value: validEventsCount, detail: isReset ? 'Idle until run' : `of ${selectedScenario.events.length} raw records`, tone: 'cyan' },
-    { label: 'Duplicates filtered', value: dupCount, detail: isReset ? 'No run yet' : 'Stable identity checks', tone: 'violet' },
-    { label: 'Decoy alerts', value: alertsCount, detail: isReset ? 'No run yet' : alertsCount ? 'Decoy destination matched' : 'No decoy destination', tone: alertsCount > 0 && !isReset ? 'rose' : 'mint' },
-    { label: 'Confirmed edges', value: confirmedEdgesCount, detail: isReset ? 'No run yet' : 'Event + topology backed', tone: 'cyan' },
-    { label: 'Evidence gaps', value: unresolvedGapsCount, detail: isReset ? 'No run yet' : unresolvedGapsCount ? 'Unconfirmed transitions' : 'No missing links', tone: unresolvedGapsCount > 0 && !isReset ? 'amber' : 'mint' },
+    { label: 'Validated events', value: isReset ? '—' : String(validEventsCount), detail: isReset ? 'Run a scenario' : `of ${selectedScenario.events.length} records`, tone: 'cyan' },
+    { label: 'Duplicates removed', value: isReset ? '—' : String(dupCount), detail: isReset ? 'No run yet' : 'Stable identity checks', tone: 'violet' },
+    { label: 'Decoy alerts', value: isReset ? '—' : String(alertsCount), detail: isReset ? 'No run yet' : alertsCount ? 'Interaction detected' : 'No decoy hit', tone: !isReset && alertsCount ? 'rose' : 'mint' },
+    { label: 'Confirmed edges', value: isReset ? '—' : String(confirmedEdgesCount), detail: isReset ? 'No run yet' : 'Event + topology backed', tone: 'cyan' },
+    { label: 'Evidence gaps', value: isReset ? '—' : String(unresolvedGapsCount), detail: isReset ? 'No run yet' : unresolvedGapsCount ? 'Need more evidence' : 'None found', tone: !isReset && unresolvedGapsCount ? 'amber' : 'mint' },
   ] as const;
 
   return (
     <div className="lureline-header">
       <header className="lureline-topbar">
-        <a href="#top" className="lureline-brand" aria-label="Lureline home">
+        <a href="#top" className="lureline-brand" aria-label="Lureline home" onClick={() => onNavigate('investigation')}>
           <span className="lureline-brand-mark"><Workflow size={20} aria-hidden="true" /></span>
           <span>Lureline<span className="lureline-brand-dot">.</span><small>DECEPTION INTELLIGENCE</small></span>
         </a>
         <nav aria-label="Workbench sections" className="lureline-nav">
-          {navItems.map(({ href, label, icon: Icon }) => (
-            <a href={href} key={href}><Icon size={15} aria-hidden="true" />{label}</a>
+          {navItems.map(({ id, label, description, icon: Icon }) => (
+            <button
+              type="button"
+              key={id}
+              className={`lureline-nav-item ${activeSection === id ? 'is-active' : ''}`}
+              aria-current={activeSection === id ? 'page' : undefined}
+              onClick={() => onNavigate(id)}
+              title={description}
+            >
+              <Icon size={15} aria-hidden="true" />{label}
+            </button>
           ))}
         </nav>
         <div className="lureline-top-actions">
-          <span className="lureline-live-label"><span /> DEMO WORKSPACE</span>
+          <span className="lureline-live-label"><span /> SYNTHETIC LAB</span>
           <button type="button" onClick={onRunScenario} className="lureline-primary-button">
             <Play size={15} fill="currentColor" aria-hidden="true" />
             {isReset ? 'Run scenario' : 'Run again'}
@@ -71,7 +94,7 @@ export function IncidentHeader({
       <section className="lureline-hero" aria-labelledby="scenario-heading">
         <div className="lureline-hero-copy">
           <div className="lureline-eyebrow"><span>INVESTIGATION WORKSPACE</span><i />{selectedScenario.code}<i />{selectedScenario.category}</div>
-          <h1 id="scenario-heading">{selectedScenario.title}</h1>
+          <h1 id="scenario-heading">{selectedScenario.title.replace(/^Scenario [A-D]\s*[—-]\s*/, '')}</h1>
           <p>{selectedScenario.description}</p>
           <div className="lureline-objective"><ShieldCheck size={16} aria-hidden="true" /><span><strong>Objective</strong>{selectedScenario.analystObjective}</span></div>
         </div>
@@ -86,9 +109,11 @@ export function IncidentHeader({
         <div className="lureline-scenario-picker" role="group" aria-label="Select investigation scenario">
           {scenarios.map((scenario) => {
             const active = scenario.id === selectedScenario.id;
-            return <button key={scenario.id} type="button" onClick={() => onSelectScenario(scenario.id)} aria-pressed={active} className={active ? 'active' : ''}>
-              <span>{scenario.code.replace('SCENARIO-', '')}</span><small>{scenario.category}</small>
-            </button>;
+            return (
+              <button key={scenario.id} type="button" onClick={() => onSelectScenario(scenario.id)} aria-pressed={active} className={active ? 'active' : ''}>
+                <span>{scenario.code.replace('SCENARIO-', '')}</span><small>{scenario.category}</small>
+              </button>
+            );
           })}
         </div>
         <div className="lureline-control-actions">
@@ -102,7 +127,7 @@ export function IncidentHeader({
         {metrics.map((metric, index) => (
           <article className={`lureline-metric metric-${metric.tone}`} key={metric.label}>
             <div className="lureline-metric-label"><span className="metric-index">0{index + 1}</span>{metric.label}</div>
-            <div className="lureline-metric-value">{isReset ? '—' : metric.value}</div>
+            <div className="lureline-metric-value" key={`${metric.label}-${metric.value}-${runCount}`}>{metric.value}</div>
             <div className="lureline-metric-detail">{metric.detail}</div>
             <div className="lureline-metric-glow" aria-hidden="true" />
           </article>
