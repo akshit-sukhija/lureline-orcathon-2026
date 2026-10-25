@@ -23,3 +23,62 @@
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+
+/* Workbench frame and component surfaces */
+.lureline-app {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  background: transparent !important;
+}
+.lureline-main {
+  width: min(1500px, 100%);
+  padding-top: 25px;
+  padding-bottom: 36px;
+}
+.lureline-main section {
+  position: relative;
+  background: linear-gradient(148deg, rgba(18, 28, 45, .94), rgba(10, 16, 28, .96)) !important;
+  border-color: var(--ll-line) !important;
+  border-radius: 17px !important;
+  box-shadow: inset 1px 1px rgba(255,255,255,.035), 0 14px 35px rgba(0,0,0,.14);
+}
+.lureline-main section > [class*="border-b"] {
+  border-color: rgba(145,169,206,.14) !important;
+}
+.lureline-main section h2 {
+  color: #eef4ff;
+  letter-spacing: -.02em;
+}
+.lureline-main section p { text-wrap: pretty; }
+.lureline-main section [class*="bg-slate-900"] {
+  background-color: rgba(8, 15, 27, .6);
+}
+.lureline-main section .rounded-md.border,
+.lureline-main section .rounded-lg.border {
+  border-color: rgba(145,169,206,.16);
+}
+.lureline-main section input,
+.lureline-main section select,
+.lureline-main section textarea {
+  color: #e4edf9;
+  background-color: rgba(6, 12, 23, .8);
+  border-color: rgba(145,169,206,.22);
+  border-radius: 9px;
+}
+.lureline-main section button:not(:disabled) { transition: background .16s ease, border-color .16s ease, transform .16s ease; }
+.lureline-main section button:focus-visible,
+.lureline-main section a:focus-visible,
+.lureline-nav a:focus-visible {
+  outline: 2px solid var(--ll-cyan);
+  outline-offset: 3px;
+}
+.lureline-footer {
+  background: rgba(6, 10, 18, .85) !important;
+  border-color: var(--ll-line) !important;
+}
+@media (max-width: 760px) {
+  .lureline-main { padding-top: 18px; padding-bottom: 24px; }
+  .lureline-main section { border-radius: 14px !important; }
+}
