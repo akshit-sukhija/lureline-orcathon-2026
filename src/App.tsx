@@ -7,7 +7,7 @@ import { AlertPanel } from './components/AlertPanel';
 import { BenchmarkPanel } from './components/BenchmarkPanel';
 import { EventLedger } from './components/EventLedger';
 import { EvidenceInspector } from './components/EvidenceInspector';
-import { IncidentHeader, WorkbenchSection } from './components/IncidentHeader';
+import { IncidentHeader, type WorkbenchSection } from './components/IncidentHeader';
 import { InvestigationFlow } from './components/InvestigationFlow';
 import { InvestigationSummary } from './components/InvestigationSummary';
 import { NetworkGraph } from './components/NetworkGraph';
